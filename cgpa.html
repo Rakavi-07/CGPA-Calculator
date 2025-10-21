@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGPA Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .course-row {
+            transition: all 0.3s ease-in-out;
+        }
+        .delete-btn {
+            transition: background-color 0.2s ease;
+        }
+        .result-box {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">CGPA Calculator</h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">Enter your course credits and grades to find your CGPA.</p>
+        </div>
+
+        <!-- Form for Courses -->
+        <form id="cgpa-form">
+            <div id="courses-container" class="space-y-4 mb-6">
+                <!-- Initial Course Row (or loaded data) -->
+                <div class="course-row flex flex-col sm:flex-row items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <input type="text" placeholder="Course Name (Optional)" class="course-name w-full sm:w-1/3 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="number" min="0" step="0.1" placeholder="Credits" class="course-credits w-full sm:w-1/4 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" required>
+                    <select class="course-grade w-full sm:w-1/4 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" required>
+                        <option value="" disabled selected>Grade</option>
+                        <option value="10">O (10)</option>
+                        <option value="9">A+ (9)</option>
+                        <option value="8">A (8)</option>
+                        <option value="7">B+ (7)</option>
+                        <option value="6">B (6)</option>
+                        <option value="5">C (5)</option>
+                        <option value="4">P (4)</option>
+                        <option value="0">F (0)</option>
+                    </select>
+                    <button type="button" class="delete-btn w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md hidden">
+                        Remove
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <button type="button" id="add-course" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">
+                    Add Another Course
+                </button>
+                <button type="submit" id="calculate-cgpa" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">
+                    Calculate CGPA
+                </button>
+                 <button type="button" id="save-data" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">
+                    Save Data
+                </button>
+                <button type="button" id="reset-form" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">
+                    Reset
+                </button>
+            </div>
+        </form>
+
+        <!-- Save Message -->
+        <div id="save-message" class="text-center text-green-600 dark:text-green-400 h-6 mb-4 transition-opacity duration-300 opacity-0">
+            Course data saved successfully!
+        </div>
+
+        <!-- Result Display -->
+        <div id="result-container" class="result-box text-center p-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg hidden">
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Your CGPA is</h2>
+            <p id="cgpa-result" class="text-5xl font-extrabold text-blue-500 dark:text-blue-400">0.00</p>
+            <p id="gpa-message" class="text-gray-600 dark:text-gray-300 mt-3"></p>
+        </div>
+        
+        <!-- Error Message -->
+        <div id="error-message" class="text-center p-4 bg-red-100 text-red-700 rounded-lg hidden">
+            Please fill in all credit and grade fields before calculating.
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const coursesContainer = document.getElementById('courses-container');
+            const addCourseBtn = document.getElementById('add-course');
+            const cgpaForm = document.getElementById('cgpa-form');
+            const resultContainer = document.getElementById('result-container');
+            const cgpaResult = document.getElementById('cgpa-result');
+            const gpaMessage = document.getElementById('gpa-message');
+            const resetBtn = document.getElementById('reset-form');
+            const saveBtn = document.getElementById('save-data');
+            const errorMessage = document.getElementById('error-message');
+            const saveMessage = document.getElementById('save-message');
+
+            // Function to create a new course row
+            const createCourseRow = (course = {}) => {
+                const courseRow = document.createElement('div');
+                courseRow.className = 'course-row flex flex-col sm:flex-row items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg';
+                
+                courseRow.innerHTML = `
+                    <input type="text" placeholder="Course Name (Optional)" class="course-name w-full sm:w-1/3 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" value="${course.name || ''}">
+                    <input type="number" min="0" step="0.1" placeholder="Credits" class="course-credits w-full sm:w-1/4 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" value="${course.credits || ''}" required>
+                    <select class="course-grade w-full sm:w-1/4 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" required>
+                        <option value="" disabled ${!course.grade ? 'selected' : ''}>Grade</option>
+                        <option value="10" ${course.grade == '10' ? 'selected' : ''}>O (10)</option>
+                        <option value="9" ${course.grade == '9' ? 'selected' : ''}>A+ (9)</option>
+                        <option value="8" ${course.grade == '8' ? 'selected' : ''}>A (8)</option>
+                        <option value="7" ${course.grade == '7' ? 'selected' : ''}>B+ (7)</option>
+                        <option value="6" ${course.grade == '6' ? 'selected' : ''}>B (6)</option>
+                        <option value="5" ${course.grade == '5' ? 'selected' : ''}>C (5)</option>
+                        <option value="4" ${course.grade == '4' ? 'selected' : ''}>P (4)</option>
+                        <option value="0" ${course.grade == '0' ? 'selected' : ''}>F (0)</option>
+                    </select>
+                    <button type="button" class="delete-btn w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md">
+                        Remove
+                    </button>
+                `;
+                return courseRow;
+            };
+
+            // Function to update visibility of delete buttons
+            const updateDeleteButtons = () => {
+                const courseRows = document.querySelectorAll('.course-row');
+                courseRows.forEach((row) => {
+                    const deleteBtn = row.querySelector('.delete-btn');
+                    if (courseRows.length > 1) {
+                        deleteBtn.classList.remove('hidden');
+                    } else {
+                        deleteBtn.classList.add('hidden');
+                    }
+                });
+            };
+
+            // Save course data to localStorage
+            const saveCourses = () => {
+                const courseRows = document.querySelectorAll('.course-row');
+                const courses = [];
+                courseRows.forEach(row => {
+                    const name = row.querySelector('.course-name').value;
+                    const credits = row.querySelector('.course-credits').value;
+                    const grade = row.querySelector('.course-grade').value;
+                    if (credits && grade) {
+                        courses.push({ name, credits, grade });
+                    }
+                });
+                localStorage.setItem('cgpaData', JSON.stringify(courses));
+
+                // Show save confirmation message
+                saveMessage.classList.remove('opacity-0');
+                setTimeout(() => {
+                    saveMessage.classList.add('opacity-0');
+                }, 2000);
+            };
+
+            // Load course data from localStorage
+            const loadCourses = () => {
+                const savedCourses = JSON.parse(localStorage.getItem('cgpaData'));
+                if (savedCourses && savedCourses.length > 0) {
+                    coursesContainer.innerHTML = ''; // Clear initial row
+                    savedCourses.forEach(course => {
+                        coursesContainer.appendChild(createCourseRow(course));
+                    });
+                }
+                updateDeleteButtons();
+            };
+
+            // Event listener for adding a new course
+            addCourseBtn.addEventListener('click', () => {
+                 coursesContainer.appendChild(createCourseRow());
+                 updateDeleteButtons();
+            });
+            
+            // Event delegation for deleting a course row
+            coursesContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-btn')) {
+                    e.target.closest('.course-row').remove();
+                    updateDeleteButtons();
+                }
+            });
+
+            // Function to calculate CGPA
+            cgpaForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const courseRows = document.querySelectorAll('.course-row');
+                let totalCredits = 0;
+                let totalGradePoints = 0;
+                let isValid = true;
+
+                courseRows.forEach(row => {
+                    const creditsInput = row.querySelector('.course-credits');
+                    const gradeSelect = row.querySelector('.course-grade');
+
+                    const credits = parseFloat(creditsInput.value);
+                    const grade = parseFloat(gradeSelect.value);
+
+                    if (isNaN(credits) || credits <= 0 || isNaN(grade)) {
+                        isValid = false;
+                        return;
+                    }
+
+                    totalCredits += credits;
+                    totalGradePoints += credits * grade;
+                });
+                
+                errorMessage.classList.add('hidden');
+                if (!isValid || totalCredits === 0) {
+                    errorMessage.classList.remove('hidden');
+                    resultContainer.classList.add('hidden');
+                    return;
+                }
+
+                const cgpa = totalGradePoints / totalCredits;
+                cgpaResult.textContent = cgpa.toFixed(2);
+                
+                // Set message based on CGPA
+                let message = '';
+                if (cgpa >= 9) message = "Outstanding! Keep up the excellent work!";
+                else if (cgpa >= 8) message = "Excellent! You're doing great!";
+                else if (cgpa >= 7) message = "Very Good! Strong performance!";
+                else if (cgpa >= 6) message = "Good job! Keep pushing yourself.";
+                else if (cgpa >= 5) message = "Satisfactory. Aim higher next time!";
+                else message = "There's room for improvement. You can do it!";
+                gpaMessage.textContent = message;
+
+                resultContainer.classList.remove('hidden');
+            });
+
+            // Function to reset the form
+            resetBtn.addEventListener('click', () => {
+                localStorage.removeItem('cgpaData');
+                coursesContainer.innerHTML = '';
+                coursesContainer.appendChild(createCourserow());
+                updateDeleteButtons();
+                cgpaForm.reset();
+                resultContainer.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+            });
+
+            // Save button event listener
+            saveBtn.addEventListener('click', saveCourses);
+
+            // Initial setup on page load
+            loadCourses();
+        });
+    </script>
+</body>
+</html>
+
